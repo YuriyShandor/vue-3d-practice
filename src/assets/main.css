@@ -1,35 +1,61 @@
-@import './base.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-
-  font-weight: normal;
+/* Variables */
+:root {
+  --white: #fff;
+  --black: #000;
+  --blue: #2091f9;
+  --dark-red: #d50000;
+  --green: #228b22;
+  --orange: #f6681c;
+  --hover-color: var(--orange);
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
+.light {
+  --primary-background: #ffffff;
+  --secondary-background: #ebe6da;
+  --primary-color: #000000;
+  --secondary-color: #555555;
+  --label-color: #0f203c6e;
+  --heading-color: #4b3e3a;
+  --btn-color: #222;
+  --btn-hover-color: #fafafa;
+  --box-shadow-color: rgba(0, 0, 0, 0.07);
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+.dark {
+  --primary-background: #141414;
+  --secondary-background: #000000;
+  --primary-color: #ffffff;
+  --secondary-color: #838383;
+  --label-color: #fff9c670;
+  --heading-color: #ffe6b6;
+  --btn-color: #fafafa;
+  --btn-hover-color: #222;
+  --box-shadow-color: rgba(255, 255, 255, 0.07);
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+/* Global Styles */
+body {
+  @apply w-full relative font-sans leading-snug font-normal tracking-[0.2px] text-[16px];
+  @apply text-primary-color bg-primary-background transition-[background-color];
+  @apply duration-300 selection:bg-slate-300 dark:selection:bg-slate-700;
+}
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+::-webkit-scrollbar {
+  @apply w-[10px];
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-[#888] rounded-[3px];
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-[#000] rounded-[3px];
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-[#555];
 }
