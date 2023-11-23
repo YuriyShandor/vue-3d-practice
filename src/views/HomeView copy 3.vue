@@ -1,10 +1,7 @@
 <template>
   <div class="w-full">
     <div class="container">
-      <!-- <div id="scene-container" class="w-full h-[80vh] bg-black"></div> -->
-      <div class="w-full h-screen flex items-center justify-center">
-        <h1 class="text-[32px] md:text-[52px] lg:text-[72px] font-bold">Vue 3D Practice</h1>
-      </div>
+      <div id="scene-container" class="w-full h-[80vh] bg-black"></div>
     </div>
   </div>
 </template>
