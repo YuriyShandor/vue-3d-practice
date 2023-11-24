@@ -10,11 +10,12 @@
 
 <script setup lang="ts">
 import * as THREE from 'three';
+import WebGL from 'three/addons/capabilities/WebGL.js';
 import { onMounted, onUnmounted } from 'vue';
 
 const scene = new THREE.Scene();
 scene.background = null;
-const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(33, 1, 0.1, 10);
 camera.position.z = 5;
 
 const renderer = new THREE.WebGLRenderer({ alpha: true });
@@ -53,6 +54,12 @@ onMounted(() => {
 
   resizeScene();
   renderScene();
+
+  if (WebGL.isWebGLAvailable()) {
+    animate();
+  } else {
+    console.log(WebGL.getWebGLErrorMessage());
+  }
   animate();
 
   window.addEventListener('resize', resizeScene);
