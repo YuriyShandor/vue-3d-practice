@@ -1,8 +1,8 @@
 <template>
   <div class="w-full">
     <div class="container">
-      <div class="w-full h-screen flex items-center justify-center">
-        <div class="w-full max-w-[100vh] h-screen max-h-[100vw]" id="model-scene-container"></div>
+      <div class="flex items-center justify-center">
+        <div class="w-screen h-screen" id="model-scene-container"></div>
       </div>
     </div>
   </div>
@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import ModelsHelper from '@/helpers/models.helper';
+import ModelsHelper from '@/helpers/models/models.helper';
 
 // import { Scene, PerspectiveCamera, WebGLRenderer, AmbientLight } from 'three';
 // import WebGL from 'three/addons/capabilities/WebGL.js';
@@ -102,22 +102,22 @@ import ModelsHelper from '@/helpers/models.helper';
 // }
 
 const initModel = async () => {
-  const container = document.querySelector('#scene-container');
+  const container = document.querySelector('#model-scene-container');
 
-  // create a new world
-  const model = new ModelsHelper(container);
+  if (container !== null) {
+    // create a new world
+    const model = new ModelsHelper(container);
 
-  // complete async tasks
-  await model.init();
+    // complete async tasks
+    await model.init();
 
-  // start the animation loop
-  model.start();
+    // start the animation loop
+    model.start();
+  }
 };
 
 onMounted(() => {
-  initModel().catch((err) => {
-    console.error(err);
-  });
+  initModel();
   // init();
   // sceneContainer = document.querySelector('#model-scene-container');
   // if (WebGL.isWebGLAvailable()) {
