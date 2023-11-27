@@ -43,8 +43,8 @@ const resizeScene = () => {
 function animate() {
   requestAnimationFrame(animate);
 
-  cube.rotation.x += 0.01;
-  cube.rotation.y += 0.01;
+  cube.rotation.x += 0.005;
+  cube.rotation.y += 0.003;
 
   renderer.render(scene, camera);
 }
