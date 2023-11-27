@@ -13,7 +13,7 @@ import { RouterLink, RouterView } from 'vue-router';
           class="h-full flex flex-wrap justify-center items-center py-[5px] lg:py-[10px] gap-[10px] lg:gap-[20px]"
         >
           <RouterLink to="/cube">Cube</RouterLink>
-          <RouterLink to="/about">About</RouterLink>
+          <RouterLink to="/model">Model</RouterLink>
         </div>
       </div>
     </div>
