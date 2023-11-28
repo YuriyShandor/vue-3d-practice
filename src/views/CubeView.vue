@@ -9,20 +9,30 @@
 </template>
 
 <script setup lang="ts">
-import * as THREE from 'three';
+import {
+  Scene,
+  PerspectiveCamera,
+  WebGLRenderer,
+  BoxGeometry,
+  MeshBasicMaterial,
+  Mesh
+} from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import { onMounted, onUnmounted } from 'vue';
 
-const scene = new THREE.Scene();
+const scene = new Scene();
 scene.background = null;
-const camera = new THREE.PerspectiveCamera(33, 1, 0.1, 10);
+const camera = new PerspectiveCamera(33, 1, 0.1, 10);
 camera.position.z = 5;
 
-const renderer = new THREE.WebGLRenderer({ alpha: true });
+const renderer = new WebGLRenderer({ alpha: true });
 
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshBasicMaterial({ color: 0xd50000, fog: false });
-const cube = new THREE.Mesh(geometry, material);
+const geometry = new BoxGeometry(1, 1, 1);
+for (var i = 0; i < geometry.faces.length; i++) {
+  geometry.faces[i].color.setHex(Math.random() * 0xffffff);
+}
+const material = new MeshBasicMaterial({ color: 0xd50000, vertexColors: true });
+const cube = new Mesh(geometry, material);
 scene.add(cube);
 
 let sceneContainer: HTMLElement | null = null;
