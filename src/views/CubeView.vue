@@ -15,9 +15,12 @@ import {
   WebGLRenderer,
   BoxGeometry,
   MeshBasicMaterial,
-  Mesh
+  Color,
+  Mesh,
+  Float32BufferAttribute
 } from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { onMounted, onUnmounted } from 'vue';
 
 const scene = new Scene();
@@ -27,19 +30,34 @@ camera.position.z = 5;
 
 const renderer = new WebGLRenderer({ alpha: true });
 
-const geometry = new BoxGeometry(1, 1, 1);
-for (var i = 0; i < geometry.faces.length; i++) {
-  geometry.faces[i].color.setHex(Math.random() * 0xffffff);
+const piece = new BoxGeometry(1, 1, 1).toNonIndexed();
+const material = new MeshBasicMaterial({
+  vertexColors: true
+});
+const positionAttribute = piece.getAttribute('position');
+const colors = [];
+const color = new Color();
+for (let i = 0; i < positionAttribute.count; i += 6) {
+  color.setHex(0x500000 * Math.random());
+  colors.push(color.r, color.g, color.b);
+  colors.push(color.r, color.g, color.b);
+  colors.push(color.r, color.g, color.b);
+  colors.push(color.r, color.g, color.b);
+  colors.push(color.r, color.g, color.b);
+  colors.push(color.r, color.g, color.b);
 }
-const material = new MeshBasicMaterial({ color: 0xd50000, vertexColors: true });
-const cube = new Mesh(geometry, material);
+piece.setAttribute('color', new Float32BufferAttribute(colors, 3));
+const cube = new Mesh(piece, material);
 scene.add(cube);
 
 let sceneContainer: HTMLElement | null = null;
 
+const controls = new OrbitControls(camera, renderer.domElement);
+
 const renderScene = () => {
   if (sceneContainer !== null) {
     sceneContainer.appendChild(renderer.domElement);
+    controls.update();
   }
 };
 
@@ -70,7 +88,6 @@ onMounted(() => {
   } else {
     console.log(WebGL.getWebGLErrorMessage());
   }
-  animate();
 
   window.addEventListener('resize', resizeScene);
 });
