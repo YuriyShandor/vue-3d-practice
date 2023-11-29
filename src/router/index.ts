@@ -20,9 +20,9 @@ const router = createRouter({
       component: () => import('../views/ModelView.vue')
     },
     {
-      path: '/soldier',
-      name: 'soldier',
-      component: () => import('../views/SoldierView.vue')
+      path: '/leaf',
+      name: 'leaf',
+      component: () => import('../views/LeafView.vue')
     }
   ]
 });

@@ -9,6 +9,7 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue';
 import {
   Scene,
   PerspectiveCamera,
@@ -21,7 +22,6 @@ import {
 } from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { onMounted, onUnmounted } from 'vue';
 
 const scene = new Scene();
 scene.background = null;
@@ -29,6 +29,7 @@ const camera = new PerspectiveCamera(33, 1, 0.1, 10);
 camera.position.z = 5;
 
 const renderer = new WebGLRenderer({ alpha: true });
+const controls = new OrbitControls(camera, renderer.domElement);
 
 const piece = new BoxGeometry(1, 1, 1).toNonIndexed();
 const material = new MeshBasicMaterial({
@@ -38,7 +39,7 @@ const positionAttribute = piece.getAttribute('position');
 const colors = [];
 const color = new Color();
 for (let i = 0; i < positionAttribute.count; i += 6) {
-  color.setHex(0x500000 * Math.random());
+  color.setHex(0x123456 * Math.random());
   colors.push(color.r, color.g, color.b);
   colors.push(color.r, color.g, color.b);
   colors.push(color.r, color.g, color.b);
@@ -52,12 +53,9 @@ scene.add(cube);
 
 let sceneContainer: HTMLElement | null = null;
 
-const controls = new OrbitControls(camera, renderer.domElement);
-
 const renderScene = () => {
   if (sceneContainer !== null) {
     sceneContainer.appendChild(renderer.domElement);
-    controls.update();
   }
 };
 
@@ -75,6 +73,8 @@ function animate() {
   cube.rotation.y += 0.003;
 
   renderer.render(scene, camera);
+
+  controls.update();
 }
 
 onMounted(() => {
