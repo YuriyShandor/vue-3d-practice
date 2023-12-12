@@ -23,6 +23,11 @@ const router = createRouter({
       path: '/leaf',
       name: 'leaf',
       component: () => import('../views/LeafView.vue')
+    },
+    {
+      path: '/tube',
+      name: 'tube',
+      component: () => import('../views/TubeView.vue')
     }
   ]
 });
