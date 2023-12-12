@@ -1,8 +1,39 @@
 <template>
   <div class="w-full">
-    <div class="container">
-      <div class="w-full h-screen flex items-center justify-center">
-        <div class="w-full max-w-[100vh] h-screen max-h-[100vw]" id="cube-scene-container"></div>
+    <div class="section">
+      <div class="container">
+        <div class="w-full h-screen flex items-center justify-center">
+          <div class="w-full max-w-[100vh] h-screen max-h-[100vw]" id="cube-scene-container"></div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="container">
+        <div class="w-full flex flex-col gap-3">
+          <div class="flex gap-2">
+            <div class="text-[18px] font-bold">Radius:</div>
+            <label for="input_radius">
+              <input
+                type="number"
+                id="input_radius"
+                class="text-black"
+                v-model="state.tubeRadius"
+              />
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <div class="text-[18px] font-bold">Color:</div>
+            <label for="input_radius">
+              <input
+                type="text"
+                id="input_radius"
+                class="text-black"
+                v-model="state.tubeColor"
+                @input="updateColor()"
+              />
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -29,10 +60,15 @@ import {
   WebGLRenderer
 } from 'three';
 
-import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+// import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGL from 'three/addons/capabilities/WebGL.js';
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, reactive, watch } from 'vue';
+
+const state = reactive({
+  tubeRadius: 1,
+  tubeColor: 'black'
+});
 
 class CustomSinCurve extends Curve {
   constructor(scale = 1) {
@@ -50,18 +86,18 @@ class CustomSinCurve extends Curve {
   }
 }
 
-function updateGroupGeometry(mesh, geometry) {
+const updateGroupGeometry = (mesh: any, geometry: any) => {
   mesh.children[0].geometry.dispose();
   mesh.children[1].geometry.dispose();
 
   mesh.children[0].geometry = new WireframeGeometry(geometry);
   mesh.children[1].geometry = geometry;
-}
+};
 
 const tubeGeometry = (mesh: any) => {
   const data = {
     segments: 100,
-    radius: 2,
+    radius: state.tubeRadius,
     radialSegments: 20
   };
 
@@ -74,16 +110,16 @@ const tubeGeometry = (mesh: any) => {
     );
   };
 
-  const folder = gui.addFolder('THREE.TubeGeometry');
+  // const folder = gui.addFolder('THREE.TubeGeometry');
 
-  folder.add(data, 'segments', 1, 100).step(1).onChange(generateGeometry);
-  folder.add(data, 'radius', 1, 10).onChange(generateGeometry);
-  folder.add(data, 'radialSegments', 1, 20).step(1).onChange(generateGeometry);
+  // folder.add(data, 'segments', 1, 100).step(1).onChange(generateGeometry);
+  // folder.add(data, 'radius', 1, 10).onChange(generateGeometry);
+  // folder.add(data, 'radialSegments', 1, 20).step(1).onChange(generateGeometry);
 
   generateGeometry();
 };
 
-const gui = new GUI();
+// const gui = new GUI();
 
 const scene = new Scene();
 scene.background = null;
@@ -117,14 +153,15 @@ geometry.setAttribute('position', new Float32BufferAttribute([], 3));
 
 const lineMaterial = new LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
 const meshMaterial = new MeshPhongMaterial({
-  color: 0x000000,
-  emissive: 0x000000,
+  color: state.tubeColor,
+  emissive: state.tubeColor,
   side: DoubleSide,
   flatShading: true
 });
 
 group.add(new LineSegments(geometry, lineMaterial));
 group.add(new Mesh(geometry, meshMaterial));
+group.matrixAutoUpdate = false;
 
 tubeGeometry(group);
 
@@ -154,6 +191,10 @@ function animate() {
   renderer.render(scene, camera);
 }
 
+const updateColor = () => {
+  tubeGeometry(group);
+};
+
 onMounted(() => {
   sceneContainer = document.querySelector('#cube-scene-container');
 
@@ -172,4 +213,11 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', resizeScene);
 });
+
+watch(
+  () => state.tubeRadius,
+  () => {
+    group.updateMatrix();
+  }
+);
 </script>
