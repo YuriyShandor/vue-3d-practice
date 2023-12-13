@@ -16,6 +16,7 @@ import { RouterLink, RouterView } from 'vue-router';
           <RouterLink to="/model">Model</RouterLink>
           <RouterLink to="/leaf">Leaf</RouterLink>
           <RouterLink to="/tube">Tube</RouterLink>
+          <RouterLink to="/shoe">Shoe</RouterLink>
         </div>
       </div>
     </div>
