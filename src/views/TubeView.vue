@@ -17,6 +17,9 @@
                 type="number"
                 id="input_radius"
                 class="text-black"
+                min="0.5"
+                max="10"
+                step="0.1"
                 v-model="state.tubeRadius"
               />
             </label>
@@ -29,7 +32,7 @@
                 id="input_radius"
                 class="text-black"
                 v-model="state.tubeColor"
-                @input="updateColor()"
+                @change="updateColor()"
               />
             </label>
           </div>
@@ -153,15 +156,15 @@ geometry.setAttribute('position', new Float32BufferAttribute([], 3));
 
 const lineMaterial = new LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
 const meshMaterial = new MeshPhongMaterial({
-  color: state.tubeColor,
-  emissive: state.tubeColor,
+  color: 'black',
+  emissive: 'black',
   side: DoubleSide,
   flatShading: true
 });
 
 group.add(new LineSegments(geometry, lineMaterial));
 group.add(new Mesh(geometry, meshMaterial));
-group.matrixAutoUpdate = false;
+// group.matrixAutoUpdate = false;
 
 tubeGeometry(group);
 
@@ -192,7 +195,7 @@ function animate() {
 }
 
 const updateColor = () => {
-  tubeGeometry(group);
+  group.children[1].material.color.set(state.tubeColor);
 };
 
 onMounted(() => {
@@ -217,7 +220,7 @@ onUnmounted(() => {
 watch(
   () => state.tubeRadius,
   () => {
-    group.updateMatrix();
+    tubeGeometry(group);
   }
 );
 </script>
