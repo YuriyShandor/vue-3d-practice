@@ -63,7 +63,6 @@ import {
   WebGLRenderer
 } from 'three';
 
-// import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import { onMounted, onUnmounted, reactive, watch } from 'vue';
@@ -113,12 +112,6 @@ const tubeGeometry = (mesh: any) => {
     );
   };
 
-  // const folder = gui.addFolder('THREE.TubeGeometry');
-
-  // folder.add(data, 'segments', 1, 100).step(1).onChange(generateGeometry);
-  // folder.add(data, 'radius', 1, 10).onChange(generateGeometry);
-  // folder.add(data, 'radialSegments', 1, 20).step(1).onChange(generateGeometry);
-
   generateGeometry();
 };
 
@@ -164,7 +157,6 @@ const meshMaterial = new MeshPhongMaterial({
 
 group.add(new LineSegments(geometry, lineMaterial));
 group.add(new Mesh(geometry, meshMaterial));
-// group.matrixAutoUpdate = false;
 
 tubeGeometry(group);
 
@@ -174,6 +166,7 @@ let sceneContainer: HTMLElement | null = null;
 
 const renderScene = () => {
   if (sceneContainer !== null) {
+    renderer.setClearColor(0xffffff, 0);
     sceneContainer.appendChild(renderer.domElement);
   }
 };
