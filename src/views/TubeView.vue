@@ -1,15 +1,11 @@
 <template>
   <div class="w-full">
     <div class="section">
-      <div class="container">
+      <div class="container relative">
         <div class="w-full h-screen flex items-center justify-center">
           <div class="w-full max-w-[100vh] h-screen max-h-[100vw]" id="cube-scene-container"></div>
         </div>
-      </div>
-    </div>
-    <div class="section">
-      <div class="container">
-        <div class="w-full flex flex-col gap-3">
+        <div class="w-full flex flex-col gap-3 absolute top-[50px] left-0 z-20">
           <div class="flex gap-2">
             <div class="text-[18px] font-bold">Radius:</div>
             <label for="input_radius">
@@ -18,7 +14,7 @@
                 id="input_radius"
                 class="text-black"
                 min="0.5"
-                max="10"
+                max="7"
                 step="0.1"
                 v-model="state.tubeRadius"
               />
