@@ -30,79 +30,40 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
-let camera: any, scene: any, renderer: any, gui: any;
+let camera: any, scene: any, renderer: any;
+let parser: any, variantsExtension: any;
 
 let sceneContainer: HTMLElement | null = null;
 
-const state = { variant: 'Default' };
+const state = reactive({
+  variants: [] as any[],
+  selectedVariant: '' as string
+});
 
 const render = () => {
   renderer.render(scene, camera);
 };
 
 const setBg = () => {
-  new THREE.TextureLoader().setPath('./images/').load(
-    'radial.jpg',
-    (texture) => {
-      texture.encoding = THREE.sRGBEncoding;
-      scene.background = texture;
-      render();
-    },
-    null,
-    (err) => {
-      console.error(err);
-      console.log(err.message);
-    }
-  );
-}
+  new THREE.TextureLoader().setPath('./images/').load('Screenshot_6.png', (texture) => {
+    texture.encoding = THREE.sRGBEncoding;
+    scene.background = texture;
+    render();
+  });
+};
 
 const setEnvironment = () => {
   new RGBELoader().setPath('./textures/').load('venice_sunset_1k.hdr', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
-
     scene.environment = texture;
-
     render();
   });
-}
+};
 
-const loadModel = () => {
-  const loader = new GLTFLoader().setPath('./models/');
-  loader.load('chair.glb', (gltf) => {
-    gltf.scene.scale.set(3.0, 3.0, 3.0);
+const selectVariant = (scene: any, parser: any, extension: any, variantName: any) => {
+  const variantIndex = extension.variants.findIndex((v: any) => v.name.includes(variantName));
 
-    scene.add(gltf.scene);
-
-    // GUI
-    gui = new GUI();
-
-    // Details of the KHR_materials_variants extension used here can be found below
-    // https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_variants
-    const parser = gltf.parser;
-
-    let variantsExtension;
-
-    if ('gltfExtensions' in gltf.userData) {
-      variantsExtension = gltf.userData.gltfExtensions['KHR_materials_variants'];
-    }
-
-    if (variantsExtension != null) {
-      const variants = variantsExtension.variants.map((variant) => variant.name);
-      const variantsCtrl = gui.add(state, 'variant', variants).name('Variant');
-
-      selectVariant(scene, parser, variantsExtension, state.variant);
-
-      variantsCtrl.onChange((value) => selectVariant(scene, parser, variantsExtension, value));
-    }
-
-    render();
-  });
-}
-
-function selectVariant(scene, parser, extension, variantName) {
-  const variantIndex = extension.variants.findIndex((v) => v.name.includes(variantName));
-
-  scene.traverse(async (object) => {
+  scene.traverse(async (object: any) => {
     if (!object.isMesh || !object.userData.gltfExtensions) return;
 
     const meshVariantDef = object.userData.gltfExtensions['KHR_materials_variants'];
@@ -113,7 +74,7 @@ function selectVariant(scene, parser, extension, variantName) {
       object.userData.originalMaterial = object.material;
     }
 
-    const mapping = meshVariantDef.mappings.find((mapping) =>
+    const mapping = meshVariantDef.mappings.find((mapping: any) =>
       mapping.variants.includes(variantIndex)
     );
 
@@ -126,18 +87,30 @@ function selectVariant(scene, parser, extension, variantName) {
 
     render();
   });
-}
+};
 
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+const loadModel = () => {
+  const loader = new GLTFLoader().setPath('./models/');
+  loader.load('chair.glb', (gltf) => {
+    gltf.scene.scale.set(3.0, 3.0, 3.0);
 
-  renderer.setSize(window.innerWidth, window.innerHeight);
+    scene.add(gltf.scene);
 
-  render();
-}
+    parser = gltf.parser;
 
-function init() {
+    if ('gltfExtensions' in gltf.userData) {
+      variantsExtension = gltf.userData.gltfExtensions['KHR_materials_variants'];
+      variantsExtension.variants.forEach((item: any) => {
+        state.variants.push(item.name);
+      });
+      state.selectedVariant = state.variants[0];
+    }
+
+    render();
+  });
+};
+
+function initScene() {
   const container = document.createElement('div');
   document.body.appendChild(container);
 
@@ -161,7 +134,7 @@ function init() {
   controls.target.set(0, 0.8, 0);
   controls.update();
 
-  window.addEventListener('resize', onWindowResize);
+  // window.addEventListener('resize', onWindowResize);
 
   setEnvironment();
   setBg();
@@ -174,8 +147,31 @@ const renderScene = () => {
   }
 };
 
+const resizeScene = () => {
+  if (sceneContainer !== null) {
+    sceneContainer.style.height = `${sceneContainer.clientWidth}px`;
+    renderer.setSize(sceneContainer.clientWidth, sceneContainer.clientHeight);
+  }
+};
+
 onMounted(() => {
-  init();
-  render();
+  sceneContainer = document.querySelector('#chair-scene-container');
+
+  initScene();
+  resizeScene();
+  renderScene();
+
+  window.addEventListener('resize', resizeScene);
 });
+
+onUnmounted(() => {
+  window.removeEventListener('resize', resizeScene);
+});
+
+watch(
+  () => state.selectedVariant,
+  () => {
+    selectVariant(scene, parser, variantsExtension, state.selectedVariant);
+  }
+);
 </script>
