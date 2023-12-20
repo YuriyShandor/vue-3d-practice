@@ -23,12 +23,19 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, watch } from 'vue';
-import * as THREE from 'three';
+import {
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+  ACESFilmicToneMapping,
+  SRGBColorSpace,
+  sRGBEncoding,
+  TextureLoader,
+  EquirectangularReflectionMapping
+} from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
 let camera: any, scene: any, renderer: any;
 let parser: any, variantsExtension: any;
@@ -45,8 +52,9 @@ const render = () => {
 };
 
 const setBg = () => {
-  new THREE.TextureLoader().setPath('./images/').load('Screenshot_6.png', (texture) => {
-    texture.encoding = THREE.sRGBEncoding;
+  new TextureLoader().setPath('./images/').load('Screenshot_6.png', (texture) => {
+    texture.encoding = sRGBEncoding;
+
     scene.background = texture;
     render();
   });
@@ -54,7 +62,7 @@ const setBg = () => {
 
 const setEnvironment = () => {
   new RGBELoader().setPath('./textures/').load('venice_sunset_1k.hdr', (texture) => {
-    texture.mapping = THREE.EquirectangularReflectionMapping;
+    texture.mapping = EquirectangularReflectionMapping;
     scene.environment = texture;
     render();
   });
@@ -111,21 +119,15 @@ const loadModel = () => {
 };
 
 function initScene() {
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 20);
+  camera = new PerspectiveCamera(45, 1, 0.25, 20);
   camera.position.set(2.5, 1.5, 3.0);
 
-  scene = new THREE.Scene();
+  scene = new Scene();
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer = new WebGLRenderer({ antialias: true });
+  renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  container.appendChild(renderer.domElement);
+  renderer.outputColorSpace = SRGBColorSpace;
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.addEventListener('change', render); // use if there is no animation loop
@@ -133,8 +135,6 @@ function initScene() {
   controls.maxDistance = 10;
   controls.target.set(0, 0.8, 0);
   controls.update();
-
-  // window.addEventListener('resize', onWindowResize);
 
   setEnvironment();
   setBg();
