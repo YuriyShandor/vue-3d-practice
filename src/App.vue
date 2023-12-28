@@ -18,6 +18,7 @@ import { RouterLink, RouterView } from 'vue-router';
           <RouterLink to="/tube">Tube</RouterLink>
           <RouterLink to="/shoe">Shoe</RouterLink>
           <RouterLink to="/chair">Chair</RouterLink>
+          <RouterLink to="/chair-v2">Chair V2</RouterLink>
         </div>
       </div>
     </div>

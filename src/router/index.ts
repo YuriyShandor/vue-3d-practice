@@ -38,6 +38,11 @@ const router = createRouter({
       path: '/chair',
       name: 'chair',
       component: () => import('../views/ChairView.vue')
+    },
+    {
+      path: '/chair-v2',
+      name: 'chair-v2',
+      component: () => import('../views/ChairV2View.vue')
     }
   ]
 });
