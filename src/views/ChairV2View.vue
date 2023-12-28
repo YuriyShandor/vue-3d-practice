@@ -1,23 +1,23 @@
 <template>
   <div class="w-full">
-    <div class="loading" id="js-loader"><div class="loader"></div></div>
+    <div class="container">
+      <div class="w-full h-screen flex items-center justify-center">
+        <div class="w-full max-w-[100vh] h-screen max-h-[100vw]" id="chair-v2-scene-container">
+          <canvas id="canvas" class="w-full h-full"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- <div class="loading" id="js-loader"><div class="loader"></div></div> -->
 
     <!-- These toggle the the different parts of the chair that can be edited, note data-option is the key that links to the name of the part in the 3D file -->
-    <div class="options">
-      <div class="option --is-active" data-option="legs">
-        <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/legs.svg" alt="" />
-      </div>
-      <div class="option" data-option="cushions">
-        <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/cushions.svg" alt="" />
-      </div>
-      <div class="option" data-option="base">
-        <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/base.svg" alt="" />
-      </div>
-      <div class="option" data-option="supports">
-        <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/supports.svg" alt="" />
-      </div>
-      <div class="option" data-option="back">
-        <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/back.svg" alt="" />
+    <div class="w-auto absolute top-[60px] left-[10px] flex gap-[5px]">
+      <div
+        class="w-[55px] h-[55px] px-[10px] py-[10px] bg-slate-200 hover:bg-slate-300 rounded-md flex items-center justify-center cursor-pointer transition-colors duration-200"
+        data-option="item.label"
+        v-for="item in details"
+        :key="item.label"
+      >
+        <img :src="item.image" alt="" />
       </div>
     </div>
 
@@ -25,7 +25,6 @@
     <span class="drag-notice" id="js-drag-notice">Drag to rotate 360&#176;</span>
 
     <!-- The canvas element is used to draw the 3D scene -->
-    <canvas id="c"></canvas>
 
     <!-- This section currently only shows a message. Named controls as I encourage you once completing this tutorial to add the ability to filter which textures and colours are allowed on which parts ( you can't really have wood cushions can you? ) -->
     <div class="controls">
@@ -48,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import {
   Scene,
   Color,
@@ -67,14 +66,53 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-let LOADER: any = null;
+const BACKGROUND_COLOR = 0xf1f1f1;
+
+let camera: any, scene: any, renderer: any;
+let parser: any, variantsExtension: any;
+
+let sceneContainer: HTMLElement | null = null;
+
+const INITIAL_MTL = new MeshPhongMaterial({ color: BACKGROUND_COLOR, shininess: 10 });
+
+const INITIAL_MAP = [
+  { childID: 'back', mtl: INITIAL_MTL },
+  { childID: 'base', mtl: INITIAL_MTL },
+  { childID: 'cushions', mtl: INITIAL_MTL },
+  { childID: 'legs', mtl: INITIAL_MTL },
+  { childID: 'supports', mtl: INITIAL_MTL }
+];
+
+// let LOADER: any = null;
 let DRAG_NOTICE: any = null;
 let TRAY: any = null;
 let theModel: any;
-const MODEL_PATH = './models/chair-v2.glb';
 let loaded = false;
 let cameraFar = 5;
 let activeOption = 'legs';
+
+const details = [
+  {
+    label: 'legs',
+    image: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/legs.svg'
+  },
+  {
+    label: 'cushions',
+    image: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/cushions.svg'
+  },
+  {
+    label: 'base',
+    image: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/base.svg'
+  },
+  {
+    label: 'supports',
+    image: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/supports.svg'
+  },
+  {
+    label: 'back',
+    image: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/back.svg'
+  }
+];
 
 const colors = [
   {
@@ -254,120 +292,413 @@ const colors = [
   }
 ];
 
-onMounted(() => {
-  LOADER = document.getElementById('js-loader');
-  DRAG_NOTICE = document.getElementById('js-drag-notice');
-  TRAY = document.getElementById('js-tray-slide');
+const render = () => {
+  renderer.render(scene, camera);
+};
 
-  const BACKGROUND_COLOR = 0xf1f1f1;
+const renderScene = () => {
+  if (sceneContainer !== null) {
+    sceneContainer.appendChild(renderer.domElement);
+  }
+};
 
-  // Init the scene
-  const scene = new Scene();
-  // Set background
+const resizeScene = () => {
+  if (sceneContainer !== null) {
+    sceneContainer.style.height = `${sceneContainer.clientWidth}px`;
+    renderer.setSize(sceneContainer.clientWidth, sceneContainer.clientHeight);
+  }
+};
+
+const initScene = () => {
+  scene = new Scene();
   scene.background = new Color(BACKGROUND_COLOR);
   scene.fog = new Fog(BACKGROUND_COLOR, 20, 100);
 
-  const canvas = document.querySelector('#c');
-
-  // Init the renderer
-  const renderer = new WebGLRenderer({ canvas, antialias: true });
-
-  renderer.shadowMap.enabled = true;
-  renderer.setPixelRatio(window.devicePixelRatio);
-
-  document.body.appendChild(renderer.domElement);
-
-  // Add a camera
-  var camera = new PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new PerspectiveCamera(50, 1, 0.1, 1000);
   camera.position.z = cameraFar;
   camera.position.x = 0;
 
-  // Initial material
-  const INITIAL_MTL = new MeshPhongMaterial({ color: 0xf1f1f1, shininess: 10 });
-
-  const INITIAL_MAP = [
-    { childID: 'back', mtl: INITIAL_MTL },
-    { childID: 'base', mtl: INITIAL_MTL },
-    { childID: 'cushions', mtl: INITIAL_MTL },
-    { childID: 'legs', mtl: INITIAL_MTL },
-    { childID: 'supports', mtl: INITIAL_MTL }
-  ];
-
-  // Init the object loader
-  var loader = new GLTFLoader();
-
-  loader.load(
-    MODEL_PATH,
-    function (gltf) {
-      theModel = gltf.scene;
-
-      theModel.traverse((o) => {
-        if (o.isMesh) {
-          o.castShadow = true;
-          o.receiveShadow = true;
-        }
-      });
-
-      // Set the models initial scale
-      theModel.scale.set(2, 2, 2);
-      theModel.rotation.y = Math.PI;
-
-      // Add the model to the scene
-      theModel.position.y = -1;
-
-      // Set initial textures
-      for (let object of INITIAL_MAP) {
-        initColor(theModel, object.childID, object.mtl);
-      }
-
-      scene.add(theModel);
-
-      // Remove the loader
-      LOADER.remove();
-    },
-    undefined,
-    function (error) {
-      console.error(error);
-    }
-  );
-
-  // Function - Add the textures to the models
-  function initColor(parent, type, mtl) {
-    parent.traverse((o) => {
-      if (o.isMesh) {
-        if (o.name.includes(type)) {
-          o.material = mtl;
-          o.nameID = type; // Set a new property to identify this object
-        }
-      }
-    });
+  const canvas: HTMLCanvasElement | null = document.querySelector('#canvas');
+  if (canvas !== null) {
+    renderer = new WebGLRenderer({ canvas, antialias: true });
+    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(window.devicePixelRatio);
   }
 
-  // Add lights
-  var hemiLight = new HemisphereLight(0xffffff, 0xffffff, 0.61);
+  renderScene();
+};
+
+const initSceneLights = () => {
+  const hemiLight = new HemisphereLight(0xffffff, 0xffffff, 0.61);
   hemiLight.position.set(0, 50, 0);
-  // Add hemisphere light to scene
   scene.add(hemiLight);
 
-  var dirLight = new DirectionalLight(0xffffff, 0.54);
+  const dirLight = new DirectionalLight(0xffffff, 0.54);
   dirLight.position.set(-8, 12, 8);
   dirLight.castShadow = true;
   dirLight.shadow.mapSize = new Vector2(1024, 1024);
-  // Add directional Light to scene
   scene.add(dirLight);
+};
 
-  // Floor
-  var floorGeometry = new PlaneGeometry(5000, 5000, 1, 1);
-  var floorMaterial = new MeshPhongMaterial({
-    color: 0xeeeeee, // This color is manually dialed in to match the background color
+const initSceneFloor = () => {
+  const floorGeometry = new PlaneGeometry(5000, 5000, 1, 1);
+  const floorMaterial = new MeshPhongMaterial({
+    color: 0xeeeeee,
     shininess: 0
   });
 
-  var floor = new Mesh(floorGeometry, floorMaterial);
+  const floor = new Mesh(floorGeometry, floorMaterial);
   floor.rotation.x = -0.5 * Math.PI;
   floor.receiveShadow = true;
   floor.position.y = -1;
   scene.add(floor);
+};
+
+const initColor = (parent: any, type: any, mtl: any) => {
+  parent.traverse((o: any) => {
+    if (o.isMesh) {
+      if (o.name.includes(type)) {
+        o.material = mtl;
+        o.nameID = type;
+      }
+    }
+  });
+};
+
+const loadModel = () => {
+  const loader = new GLTFLoader().setPath('./models/');
+  loader.load('chair-v2.glb', (gltf) => {
+    theModel = gltf.scene;
+
+    theModel.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+      }
+    });
+
+    // Set the models initial scale
+    theModel.scale.set(2, 2, 2);
+    theModel.rotation.y = Math.PI;
+
+    // Add the model to the scene
+    theModel.position.y = -1;
+
+    // Set initial textures
+    for (let object of INITIAL_MAP) {
+      initColor(theModel, object.childID, object.mtl);
+    }
+
+    scene.add(theModel);
+
+    // LOADER.remove();
+  });
+};
+
+onMounted(() => {
+  sceneContainer = document.querySelector('#chair-v2-scene-container');
+
+  // initScene();
+  // resizeScene();
+  // renderScene();
+
+  // window.addEventListener('resize', resizeScene);
+
+  // LOADER = document.getElementById('js-loader');
+  // DRAG_NOTICE = document.getElementById('js-drag-notice');
+  // TRAY = document.getElementById('js-tray-slide');
+
+  // // function animate() {
+  // //   controls.update();
+  // //   renderer.render(scene, camera);
+  // //   requestAnimationFrame(animate);
+
+  // //   if (resizeRendererToDisplaySize(renderer)) {
+  // //     const canvas = renderer.domElement;
+  // //     camera.aspect = canvas.clientWidth / canvas.clientHeight;
+  // //     camera.updateProjectionMatrix();
+  // //   }
+
+  // //   if (theModel != null && loaded == false) {
+  // //     initialRotation();
+  // //     DRAG_NOTICE.classList.add('start');
+  // //   }
+  // // }
+
+  // // animate();
+
+  // // Function - Build Colors
+
+  // function buildColors(colors) {
+  //   for (let [i, color] of colors.entries()) {
+  //     let swatch = document.createElement('div');
+  //     swatch.classList.add('tray__swatch');
+
+  //     if (color.texture) {
+  //       swatch.style.backgroundImage = 'url(' + color.texture + ')';
+  //     } else {
+  //       swatch.style.background = '#' + color.color;
+  //     }
+
+  //     swatch.setAttribute('data-key', i);
+  //     TRAY.append(swatch);
+  //   }
+  // }
+
+  // buildColors(colors);
+
+  // // Select Option
+  // const options = document.querySelectorAll('.option');
+
+  // for (const option of options) {
+  //   option.addEventListener('click', selectOption);
+  // }
+
+  // function selectOption(e) {
+  //   let option = e.target;
+  //   activeOption = e.target.dataset.option;
+  //   for (const otherOption of options) {
+  //     otherOption.classList.remove('--is-active');
+  //   }
+  //   option.classList.add('--is-active');
+  // }
+
+  // // Swatches
+  // const swatches = document.querySelectorAll('.tray__swatch');
+
+  // for (const swatch of swatches) {
+  //   swatch.addEventListener('click', selectSwatch);
+  // }
+
+  // function selectSwatch(e) {
+  //   let color = colors[parseInt(e.target.dataset.key)];
+  //   let new_mtl;
+
+  //   if (color.texture) {
+  //     let txt = new TextureLoader().load(color.texture);
+
+  //     txt.repeat.set(color.size[0], color.size[1], color.size[2]);
+  //     txt.wrapS = RepeatWrapping;
+  //     txt.wrapT = RepeatWrapping;
+
+  //     new_mtl = new MeshPhongMaterial({
+  //       map: txt,
+  //       shininess: color.shininess ? color.shininess : 10
+  //     });
+  //   } else {
+  //     new_mtl = new MeshPhongMaterial({
+  //       color: parseInt('0x' + color.color),
+  //       shininess: color.shininess ? color.shininess : 10
+  //     });
+  //   }
+
+  //   setMaterial(theModel, activeOption, new_mtl);
+  // }
+
+  // function setMaterial(parent, type, mtl) {
+  //   parent.traverse((o) => {
+  //     if (o.isMesh && o.nameID != null) {
+  //       if (o.nameID == type) {
+  //         o.material = mtl;
+  //       }
+  //     }
+  //   });
+  // }
+
+  // // // Function - Opening rotate
+  // // let initRotate = 0;
+
+  // // function initialRotation() {
+  // //   initRotate++;
+  // //   if (initRotate <= 120) {
+  // //     theModel.rotation.y += Math.PI / 60;
+  // //   } else {
+  // //     loaded = true;
+  // //   }
+  // // }
+
+  // // var slider = document.getElementById('js-tray'),
+  // //   sliderItems = document.getElementById('js-tray-slide'),
+  // //   difference;
+
+  // // function slide(wrapper, items) {
+  // //   var posX1 = 0,
+  // //     posX2 = 0,
+  // //     posInitial,
+  // //     threshold = 20,
+  // //     posFinal,
+  // //     slides = items.getElementsByClassName('tray__swatch');
+
+  // //   // Mouse events
+  // //   items.onmousedown = dragStart;
+
+  // //   // Touch events
+  // //   items.addEventListener('touchstart', dragStart);
+  // //   items.addEventListener('touchend', dragEnd);
+  // //   items.addEventListener('touchmove', dragAction);
+
+  // //   function dragStart(e) {
+  // //     e = e || window.event;
+  // //     posInitial = items.offsetLeft;
+  // //     difference = sliderItems.offsetWidth - slider.offsetWidth;
+  // //     difference = difference * -1;
+
+  // //     if (e.type == 'touchstart') {
+  // //       posX1 = e.touches[0].clientX;
+  // //     } else {
+  // //       posX1 = e.clientX;
+  // //       document.onmouseup = dragEnd;
+  // //       document.onmousemove = dragAction;
+  // //     }
+  // //   }
+
+  // //   function dragAction(e) {
+  // //     e = e || window.event;
+
+  // //     if (e.type == 'touchmove') {
+  // //       posX2 = posX1 - e.touches[0].clientX;
+  // //       posX1 = e.touches[0].clientX;
+  // //     } else {
+  // //       posX2 = posX1 - e.clientX;
+  // //       posX1 = e.clientX;
+  // //     }
+
+  // //     if (items.offsetLeft - posX2 <= 0 && items.offsetLeft - posX2 >= difference) {
+  // //       items.style.left = items.offsetLeft - posX2 + 'px';
+  // //     }
+  // //   }
+
+  // //   function dragEnd(e) {
+  // //     posFinal = items.offsetLeft;
+  // //     if (posFinal - posInitial < -threshold) {
+  // //     } else if (posFinal - posInitial > threshold) {
+  // //     } else {
+  // //       items.style.left = posInitial + 'px';
+  // //     }
+
+  // //     document.onmouseup = null;
+  // //     document.onmousemove = null;
+  // //   }
+  // // }
+
+  // // slide(slider, sliderItems);
+
+  // LOADER = document.getElementById('js-loader');
+  DRAG_NOTICE = document.getElementById('js-drag-notice');
+  TRAY = document.getElementById('js-tray-slide');
+
+  const MODEL_PATH = 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/chair.glb';
+
+  initScene();
+  // Init the scene
+  // scene = new Scene();
+  // // Set background
+  // scene.background = new Color(BACKGROUND_COLOR);
+  // scene.fog = new Fog(BACKGROUND_COLOR, 20, 100);
+
+  // const canvas = document.querySelector('#canvas');
+  // renderer = new WebGLRenderer({ canvas, antialias: true });
+  // renderer.shadowMap.enabled = true;
+  // renderer.setPixelRatio(window.devicePixelRatio);
+
+  // renderScene();
+
+  // Add a camera
+  // var camera = new PerspectiveCamera(50, 1, 0.1, 1000);
+  // camera.position.z = cameraFar;
+  // camera.position.x = 0;
+
+  // Initial material
+  // const INITIAL_MTL = new MeshPhongMaterial({ color: 0xf1f1f1, shininess: 10 });
+
+  // const INITIAL_MAP = [
+  //   { childID: 'back', mtl: INITIAL_MTL },
+  //   { childID: 'base', mtl: INITIAL_MTL },
+  //   { childID: 'cushions', mtl: INITIAL_MTL },
+  //   { childID: 'legs', mtl: INITIAL_MTL },
+  //   { childID: 'supports', mtl: INITIAL_MTL }
+  // ];
+
+  loadModel();
+  // Init the object loader
+  // var loader = new GLTFLoader();
+
+  // loader.load(
+  //   MODEL_PATH,
+  //   function (gltf) {
+  //     theModel = gltf.scene;
+
+  //     theModel.traverse((o) => {
+  //       if (o.isMesh) {
+  //         o.castShadow = true;
+  //         o.receiveShadow = true;
+  //       }
+  //     });
+
+  //     // Set the models initial scale
+  //     theModel.scale.set(2, 2, 2);
+  //     theModel.rotation.y = Math.PI;
+
+  //     // Add the model to the scene
+  //     theModel.position.y = -1;
+
+  //     // Set initial textures
+  //     for (let object of INITIAL_MAP) {
+  //       initColor(theModel, object.childID, object.mtl);
+  //     }
+
+  //     scene.add(theModel);
+
+  //     // Remove the loader
+  //     LOADER.remove();
+  //   },
+  //   undefined,
+  //   function (error) {
+  //     console.error(error);
+  //   }
+  // );
+
+  // Function - Add the textures to the models
+  // function initColor(parent, type, mtl) {
+  //   parent.traverse((o) => {
+  //     if (o.isMesh) {
+  //       if (o.name.includes(type)) {
+  //         o.material = mtl;
+  //         o.nameID = type; // Set a new property to identify this object
+  //       }
+  //     }
+  //   });
+  // }
+
+  initSceneLights();
+
+  // // Add lights
+  // var hemiLight = new HemisphereLight(0xffffff, 0xffffff, 0.61);
+  // hemiLight.position.set(0, 50, 0);
+  // // Add hemisphere light to scene
+  // scene.add(hemiLight);
+
+  // var dirLight = new DirectionalLight(0xffffff, 0.54);
+  // dirLight.position.set(-8, 12, 8);
+  // dirLight.castShadow = true;
+  // dirLight.shadow.mapSize = new Vector2(1024, 1024);
+  // // Add directional Light to scene
+  // scene.add(dirLight);
+
+  // initSceneFloor();
+
+  // // Floor
+  // var floorGeometry = new PlaneGeometry(5000, 5000, 1, 1);
+  // var floorMaterial = new MeshPhongMaterial({
+  //   color: 0xeeeeee, // This color is manually dialed in to match the background color
+  //   shininess: 0
+  // });
+
+  // var floor = new Mesh(floorGeometry, floorMaterial);
+  // floor.rotation.x = -0.5 * Math.PI;
+  // floor.receiveShadow = true;
+  // floor.position.y = -1;
+  // scene.add(floor);
 
   // Add controls
   var controls = new OrbitControls(camera, renderer.domElement);
@@ -574,6 +905,10 @@ onMounted(() => {
 
   slide(slider, sliderItems);
 });
+
+onUnmounted(() => {
+  window.removeEventListener('resize', resizeScene);
+});
 </script>
 
 <style>
@@ -590,86 +925,10 @@ onMounted(() => {
   align-items: center;
 }
 
-.loader {
-  -webkit-perspective: 120px;
-  -moz-perspective: 120px;
-  -ms-perspective: 120px;
-  perspective: 120px;
-  width: 100px;
-  height: 100px;
-}
-
-.loader:before {
-  content: '';
-  position: absolute;
-  left: 25px;
-  top: 25px;
-  width: 50px;
-  height: 50px;
-  background-color: #ff0000;
-  animation: flip 1s infinite;
-}
-
-@keyframes flip {
-  0% {
-    transform: rotate(0);
-  }
-
-  50% {
-    transform: rotateY(180deg);
-  }
-
-  100% {
-    transform: rotateY(180deg) rotateX(180deg);
-  }
-}
-
-#c {
-  width: 100%;
-  height: 100%;
-  display: block;
-  top: 0;
-  left: 0;
-}
-
 .controls {
   position: absolute;
   bottom: 0;
   width: 100%;
-}
-.options {
-  position: absolute;
-  left: 0;
-}
-.option {
-  background-size: cover;
-  background-position: 50%;
-  background-color: white;
-  margin-bottom: 3px;
-  padding: 10px;
-  height: 55px;
-  width: 55px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
-.option:hover {
-  border-left: 5px solid white;
-  width: 58px;
-}
-.option.--is-active {
-  border-right: 3px solid red;
-  width: 58px;
-  cursor: default;
-}
-.option.--is-active:hover {
-  border-left: none;
-}
-.option img {
-  height: 100%;
-  width: auto;
-  pointer-events: none;
 }
 .info {
   padding: 0 1em;
