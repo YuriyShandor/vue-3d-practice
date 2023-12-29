@@ -1,53 +1,42 @@
 <template>
   <div class="w-full">
-    <div class="container">
+    <div class="container relative z-10">
       <div class="w-full h-screen flex items-center justify-center">
         <div class="w-full max-w-[100vh] h-screen max-h-[100vw]" id="chair-v2-scene-container">
           <canvas id="canvas" class="w-full h-full"></canvas>
         </div>
       </div>
     </div>
-    <!-- <div class="loading" id="js-loader"><div class="loader"></div></div> -->
-
-    <!-- These toggle the the different parts of the chair that can be edited, note data-option is the key that links to the name of the part in the 3D file -->
-    <div class="w-auto absolute top-[60px] left-[10px] flex gap-[5px]">
+    <div class="w-auto absolute top-[60px] left-[10px] flex gap-[5px] z-20">
       <div
         class="w-[55px] h-[55px] px-[10px] py-[10px] bg-slate-200 hover:bg-slate-300 rounded-md flex items-center justify-center cursor-pointer transition-colors duration-200"
+        :class="{ 'bg-slate-500': state.activeOption === item.label }"
         data-option="item.label"
         v-for="item in details"
         :key="item.label"
+        @click="state.activeOption = item.label"
       >
         <img :src="item.image" alt="" />
       </div>
     </div>
 
-    <!-- Just a quick notice to the user that it can be interacted with -->
-    <span class="drag-notice" id="js-drag-notice">Drag to rotate 360&#176;</span>
-
-    <!-- The canvas element is used to draw the 3D scene -->
-
-    <!-- This section currently only shows a message. Named controls as I encourage you once completing this tutorial to add the ability to filter which textures and colours are allowed on which parts ( you can't really have wood cushions can you? ) -->
-    <div class="controls">
-      <div class="info">
-        <div class="info__message">
-          <p>
-            <strong>&nbsp;Grab&nbsp;</strong> to rotate chair.
-            <strong>&nbsp;Scroll&nbsp;</strong> to zoom. <strong>&nbsp;Drag&nbsp;</strong> swatches
-            to view more.
-          </p>
-        </div>
-      </div>
-
-      <!-- This tray will be filled with colors via JS, and the ability to slide this panel will be added in with a lightweight slider script (no dependency used for this) -->
-      <div id="js-tray" class="tray">
-        <div id="js-tray-slide" class="tray__slide"></div>
+    <div class="w-auto absolute bottom-0 left-0 flex flex-wrap gap-[5px] z-20">
+      <div
+        class="w-[55px] h-[55px] rounded-md overflow-hidden cursor-pointer transition-colors duration-200"
+        data-option="item.label"
+        v-for="item in colors"
+        :key="item.texture ? item.texture : item.color"
+        @click="selectColor(item)"
+      >
+        <img v-if="item.texture" :src="item.texture" class="w-full h-full" alt="" />
+        <div v-else class="w-full h-full" :style="{ background: `#${item.color}` }"></div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, reactive } from 'vue';
 import {
   Scene,
   Color,
@@ -65,6 +54,10 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const state = reactive({
+  activeOption: 'legs'
+});
 
 const BACKGROUND_COLOR = 0xf1f1f1;
 
@@ -89,7 +82,6 @@ let TRAY: any = null;
 let theModel: any;
 let loaded = false;
 let cameraFar = 5;
-let activeOption = 'legs';
 
 const details = [
   {
@@ -323,9 +315,19 @@ const initScene = () => {
     renderer = new WebGLRenderer({ canvas, antialias: true });
     renderer.shadowMap.enabled = true;
     renderer.setPixelRatio(window.devicePixelRatio);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.addEventListener('change', render);
+    controls.update();
+
+    setTimeout(() => {
+      render();
+    }, 100);
   }
 
-  renderScene();
+  loadModel();
+  initSceneLights();
 };
 
 const initSceneLights = () => {
@@ -352,6 +354,16 @@ const initSceneFloor = () => {
   floor.receiveShadow = true;
   floor.position.y = -1;
   scene.add(floor);
+};
+
+const initControls = () => {
+  const controls = new OrbitControls(camera, renderer.domElement);
+  // controls.maxPolarAngle = Math.PI / 2;
+  // controls.minPolarAngle = Math.PI / 3;
+  controls.enableDamping = true;
+
+  controls.update();
+  renderer.render(scene, camera);
 };
 
 const initColor = (parent: any, type: any, mtl: any) => {
@@ -395,8 +407,50 @@ const loadModel = () => {
   });
 };
 
+const setMaterial = (parent: any, type: any, mtl: any) => {
+  parent.traverse((o: any) => {
+    if (o.isMesh && o.nameID != null) {
+      if (o.nameID == type) {
+        o.material = mtl;
+      }
+    }
+  });
+};
+
+const selectColor = (color: any) => {
+  let new_mtl;
+
+  if (color.texture) {
+    let txt = new TextureLoader().load(color.texture);
+
+    txt.repeat.set(color.size[0], color.size[1], color.size[2]);
+    txt.wrapS = RepeatWrapping;
+    txt.wrapT = RepeatWrapping;
+
+    new_mtl = new MeshPhongMaterial({
+      map: txt,
+      shininess: color.shininess ? color.shininess : 10
+    });
+  } else {
+    new_mtl = new MeshPhongMaterial({
+      color: parseInt('0x' + color.color),
+      shininess: color.shininess ? color.shininess : 10
+    });
+  }
+
+  setMaterial(theModel, state.activeOption, new_mtl);
+
+  setTimeout(() => {
+    render();
+  }, 100);
+};
+
 onMounted(() => {
   sceneContainer = document.querySelector('#chair-v2-scene-container');
+
+  initScene();
+  resizeScene();
+  renderScene();
 
   // initScene();
   // resizeScene();
@@ -584,12 +638,12 @@ onMounted(() => {
   // // slide(slider, sliderItems);
 
   // LOADER = document.getElementById('js-loader');
-  DRAG_NOTICE = document.getElementById('js-drag-notice');
-  TRAY = document.getElementById('js-tray-slide');
+  // DRAG_NOTICE = document.getElementById('js-drag-notice');
+  // TRAY = document.getElementById('js-tray-slide');
 
-  const MODEL_PATH = 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/chair.glb';
+  // const MODEL_PATH = 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1376484/chair.glb';
 
-  initScene();
+  // initScene();
   // Init the scene
   // scene = new Scene();
   // // Set background
@@ -619,7 +673,6 @@ onMounted(() => {
   //   { childID: 'supports', mtl: INITIAL_MTL }
   // ];
 
-  loadModel();
   // Init the object loader
   // var loader = new GLTFLoader();
 
@@ -670,8 +723,6 @@ onMounted(() => {
   //   });
   // }
 
-  initSceneLights();
-
   // // Add lights
   // var hemiLight = new HemisphereLight(0xffffff, 0xffffff, 0.61);
   // hemiLight.position.set(0, 50, 0);
@@ -700,210 +751,173 @@ onMounted(() => {
   // floor.position.y = -1;
   // scene.add(floor);
 
-  // Add controls
-  var controls = new OrbitControls(camera, renderer.domElement);
-  controls.maxPolarAngle = Math.PI / 2;
-  controls.minPolarAngle = Math.PI / 3;
-  controls.enableDamping = true;
-  controls.enablePan = false;
-  controls.dampingFactor = 0.1;
-  controls.autoRotate = false; // Toggle this if you'd like the chair to automatically rotate
-  controls.autoRotateSpeed = 0.2; // 30
+  // initControls();
 
-  function animate() {
-    controls.update();
-    renderer.render(scene, camera);
-    requestAnimationFrame(animate);
+  // // Add controls
+  // var controls = new OrbitControls(camera, renderer.domElement);
+  // // controls.maxPolarAngle = Math.PI / 2;
+  // // controls.minPolarAngle = Math.PI / 3;
+  // controls.enableDamping = true;
 
-    if (resizeRendererToDisplaySize(renderer)) {
-      const canvas = renderer.domElement;
-      camera.aspect = canvas.clientWidth / canvas.clientHeight;
-      camera.updateProjectionMatrix();
-    }
+  // function animate() {
+  //   // controls.update();
+  //   // renderer.render(scene, camera);
+  //   requestAnimationFrame(animate);
 
-    if (theModel != null && loaded == false) {
-      initialRotation();
-      DRAG_NOTICE.classList.add('start');
-    }
-  }
+  //   if (resizeRendererToDisplaySize(renderer)) {
+  //     const canvas = renderer.domElement;
+  //     camera.aspect = canvas.clientWidth / canvas.clientHeight;
+  //     camera.updateProjectionMatrix();
+  //   }
 
-  animate();
+  //   if (theModel != null && loaded == false) {
+  //     // initialRotation();
+  //     DRAG_NOTICE.classList.add('start');
+  //   }
+  // }
+
+  // animate();
 
   // Function - New resizing method
-  function resizeRendererToDisplaySize(renderer) {
-    const canvas = renderer.domElement;
-    var width = window.innerWidth;
-    var height = window.innerHeight;
-    var canvasPixelWidth = canvas.width / window.devicePixelRatio;
-    var canvasPixelHeight = canvas.height / window.devicePixelRatio;
+  // function resizeRendererToDisplaySize(renderer) {
+  //   const canvas = renderer.domElement;
+  //   var width = window.innerWidth;
+  //   var height = window.innerHeight;
+  //   var canvasPixelWidth = canvas.width / window.devicePixelRatio;
+  //   var canvasPixelHeight = canvas.height / window.devicePixelRatio;
 
-    const needResize = canvasPixelWidth !== width || canvasPixelHeight !== height;
-    if (needResize) {
-      renderer.setSize(width, height, false);
-    }
-    return needResize;
-  }
+  //   const needResize = canvasPixelWidth !== width || canvasPixelHeight !== height;
+  //   if (needResize) {
+  //     renderer.setSize(width, height, false);
+  //   }
+  //   return needResize;
+  // }
 
   // Disable scrolling .. (??)
-  window.onscroll = function () {
-    window.scrollTo(0, 0);
-  };
+  // window.onscroll = function () {
+  //   window.scrollTo(0, 0);
+  // };
 
   // Function - Build Colors
 
-  function buildColors(colors) {
-    for (let [i, color] of colors.entries()) {
-      let swatch = document.createElement('div');
-      swatch.classList.add('tray__swatch');
+  // function buildColors(colors) {
+  //   for (let [i, color] of colors.entries()) {
+  //     let swatch = document.createElement('div');
+  //     swatch.classList.add('tray__swatch');
 
-      if (color.texture) {
-        swatch.style.backgroundImage = 'url(' + color.texture + ')';
-      } else {
-        swatch.style.background = '#' + color.color;
-      }
+  //     if (color.texture) {
+  //       swatch.style.backgroundImage = 'url(' + color.texture + ')';
+  //     } else {
+  //       swatch.style.background = '#' + color.color;
+  //     }
 
-      swatch.setAttribute('data-key', i);
-      TRAY.append(swatch);
-    }
-  }
+  //     swatch.setAttribute('data-key', i);
+  //     TRAY.append(swatch);
+  //   }
+  // }
 
-  buildColors(colors);
+  // buildColors(colors);
 
   // Select Option
-  const options = document.querySelectorAll('.option');
+  // const options = document.querySelectorAll('.option');
 
-  for (const option of options) {
-    option.addEventListener('click', selectOption);
-  }
+  // for (const option of options) {
+  //   option.addEventListener('click', selectOption);
+  // }
 
-  function selectOption(e) {
-    let option = e.target;
-    activeOption = e.target.dataset.option;
-    for (const otherOption of options) {
-      otherOption.classList.remove('--is-active');
-    }
-    option.classList.add('--is-active');
-  }
+  // function selectOption(e) {
+  //   let option = e.target;
+  //   activeOption = e.target.dataset.option;
+  //   for (const otherOption of options) {
+  //     otherOption.classList.remove('--is-active');
+  //   }
+  //   option.classList.add('--is-active');
+  // }
 
-  // Swatches
-  const swatches = document.querySelectorAll('.tray__swatch');
+  // // Swatches
+  // const swatches = document.querySelectorAll('.tray__swatch');
 
-  for (const swatch of swatches) {
-    swatch.addEventListener('click', selectSwatch);
-  }
-
-  function selectSwatch(e) {
-    let color = colors[parseInt(e.target.dataset.key)];
-    let new_mtl;
-
-    if (color.texture) {
-      let txt = new TextureLoader().load(color.texture);
-
-      txt.repeat.set(color.size[0], color.size[1], color.size[2]);
-      txt.wrapS = RepeatWrapping;
-      txt.wrapT = RepeatWrapping;
-
-      new_mtl = new MeshPhongMaterial({
-        map: txt,
-        shininess: color.shininess ? color.shininess : 10
-      });
-    } else {
-      new_mtl = new MeshPhongMaterial({
-        color: parseInt('0x' + color.color),
-        shininess: color.shininess ? color.shininess : 10
-      });
-    }
-
-    setMaterial(theModel, activeOption, new_mtl);
-  }
-
-  function setMaterial(parent, type, mtl) {
-    parent.traverse((o) => {
-      if (o.isMesh && o.nameID != null) {
-        if (o.nameID == type) {
-          o.material = mtl;
-        }
-      }
-    });
-  }
+  // for (const swatch of swatches) {
+  //   swatch.addEventListener('click', selectSwatch);
+  // }
 
   // Function - Opening rotate
-  let initRotate = 0;
+  // let initRotate = 0;
 
-  function initialRotation() {
-    initRotate++;
-    if (initRotate <= 120) {
-      theModel.rotation.y += Math.PI / 60;
-    } else {
-      loaded = true;
-    }
-  }
+  // function initialRotation() {
+  //   initRotate++;
+  //   if (initRotate <= 120) {
+  //     theModel.rotation.y += Math.PI / 60;
+  //   } else {
+  //     loaded = true;
+  //   }
+  // }
 
-  var slider = document.getElementById('js-tray'),
-    sliderItems = document.getElementById('js-tray-slide'),
-    difference;
+  // var slider = document.getElementById('js-tray'),
+  //   sliderItems = document.getElementById('js-tray-slide'),
+  //   difference;
 
-  function slide(wrapper, items) {
-    var posX1 = 0,
-      posX2 = 0,
-      posInitial,
-      threshold = 20,
-      posFinal,
-      slides = items.getElementsByClassName('tray__swatch');
+  // function slide(wrapper, items) {
+  //   var posX1 = 0,
+  //     posX2 = 0,
+  //     posInitial,
+  //     threshold = 20,
+  //     posFinal,
+  //     slides = items.getElementsByClassName('tray__swatch');
 
-    // Mouse events
-    items.onmousedown = dragStart;
+  //   // Mouse events
+  //   items.onmousedown = dragStart;
 
-    // Touch events
-    items.addEventListener('touchstart', dragStart);
-    items.addEventListener('touchend', dragEnd);
-    items.addEventListener('touchmove', dragAction);
+  //   // Touch events
+  //   items.addEventListener('touchstart', dragStart);
+  //   items.addEventListener('touchend', dragEnd);
+  //   items.addEventListener('touchmove', dragAction);
 
-    function dragStart(e) {
-      e = e || window.event;
-      posInitial = items.offsetLeft;
-      difference = sliderItems.offsetWidth - slider.offsetWidth;
-      difference = difference * -1;
+  //   // function dragStart(e) {
+  //   //   e = e || window.event;
+  //   //   posInitial = items.offsetLeft;
+  //   //   difference = sliderItems.offsetWidth - slider.offsetWidth;
+  //   //   difference = difference * -1;
 
-      if (e.type == 'touchstart') {
-        posX1 = e.touches[0].clientX;
-      } else {
-        posX1 = e.clientX;
-        document.onmouseup = dragEnd;
-        document.onmousemove = dragAction;
-      }
-    }
+  //   //   if (e.type == 'touchstart') {
+  //   //     posX1 = e.touches[0].clientX;
+  //   //   } else {
+  //   //     posX1 = e.clientX;
+  //   //     document.onmouseup = dragEnd;
+  //   //     document.onmousemove = dragAction;
+  //   //   }
+  //   // }
 
-    function dragAction(e) {
-      e = e || window.event;
+  //   // function dragAction(e) {
+  //   //   e = e || window.event;
 
-      if (e.type == 'touchmove') {
-        posX2 = posX1 - e.touches[0].clientX;
-        posX1 = e.touches[0].clientX;
-      } else {
-        posX2 = posX1 - e.clientX;
-        posX1 = e.clientX;
-      }
+  //   //   if (e.type == 'touchmove') {
+  //   //     posX2 = posX1 - e.touches[0].clientX;
+  //   //     posX1 = e.touches[0].clientX;
+  //   //   } else {
+  //   //     posX2 = posX1 - e.clientX;
+  //   //     posX1 = e.clientX;
+  //   //   }
 
-      if (items.offsetLeft - posX2 <= 0 && items.offsetLeft - posX2 >= difference) {
-        items.style.left = items.offsetLeft - posX2 + 'px';
-      }
-    }
+  //   //   if (items.offsetLeft - posX2 <= 0 && items.offsetLeft - posX2 >= difference) {
+  //   //     items.style.left = items.offsetLeft - posX2 + 'px';
+  //   //   }
+  //   // }
 
-    function dragEnd(e) {
-      posFinal = items.offsetLeft;
-      if (posFinal - posInitial < -threshold) {
-      } else if (posFinal - posInitial > threshold) {
-      } else {
-        items.style.left = posInitial + 'px';
-      }
+  //   // function dragEnd(e) {
+  //   //   posFinal = items.offsetLeft;
+  //   //   if (posFinal - posInitial < -threshold) {
+  //   //   } else if (posFinal - posInitial > threshold) {
+  //   //   } else {
+  //   //     items.style.left = posInitial + 'px';
+  //   //   }
 
-      document.onmouseup = null;
-      document.onmousemove = null;
-    }
-  }
+  //   //   document.onmouseup = null;
+  //   //   document.onmousemove = null;
+  //   // }
+  // }
 
-  slide(slider, sliderItems);
+  // slide(slider, sliderItems);
 });
 
 onUnmounted(() => {
