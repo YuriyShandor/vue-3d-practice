@@ -20,17 +20,33 @@
       </div>
     </div>
 
-    <div class="w-auto absolute bottom-0 left-0 flex flex-wrap gap-[5px] z-20">
-      <div
-        class="w-[55px] h-[55px] rounded-md overflow-hidden cursor-pointer transition-colors duration-200"
-        data-option="item.label"
-        v-for="item in colors"
-        :key="item.texture ? item.texture : item.color"
-        @click="selectColor(item)"
-      >
-        <img v-if="item.texture" :src="item.texture" class="w-full h-full" alt="" />
-        <div v-else class="w-full h-full" :style="{ background: `#${item.color}` }"></div>
+    <div class="w-auto relative mt-10">
+      <div class="container">
+        <div class="flex items-center justify-center flex-wrap gap-[5px]">
+          <div
+            class="w-[55px] h-[55px] rounded-md overflow-hidden cursor-pointer transition-colors duration-200"
+            data-option="item.label"
+            v-for="item in colors"
+            :key="item.texture ? item.texture : item.color"
+            @click="selectColor(item)"
+          >
+            <img v-if="item.texture" :src="item.texture" class="w-full h-full" alt="" />
+            <div v-else class="w-full h-full" :style="{ background: item.color }"></div>
+          </div>
+        </div>
       </div>
+    </div>
+    <div class="flex gap-2 mt-10">
+      <div class="text-[18px] font-bold">Color:</div>
+      <label for="input_radius">
+        <input
+          type="text"
+          id="input_radius"
+          class="text-black"
+          v-model="state.dynamicColor"
+          @change="updateColor()"
+        />
+      </label>
     </div>
   </div>
 </template>
@@ -47,16 +63,16 @@ import {
   HemisphereLight,
   DirectionalLight,
   Vector2,
-  PlaneGeometry,
-  Mesh,
   TextureLoader,
   RepeatWrapping
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { watch } from 'fs';
 
 const state = reactive({
-  activeOption: 'legs'
+  activeOption: 'legs',
+  dynamicColor: ''
 });
 
 const BACKGROUND_COLOR = 0xf1f1f1;
@@ -127,154 +143,28 @@ const colors = [
     shininess: 0
   },
   {
-    color: '131417'
+    color: '#000000'
   },
   {
-    color: '374047'
+    color: '#ff0000'
   },
   {
-    color: '5f6e78'
+    color: '#00ff00'
   },
   {
-    color: '7f8a93'
+    color: '#0000ff'
   },
   {
-    color: '97a1a7'
+    color: '#f0f00f'
   },
   {
-    color: 'acb4b9'
+    color: '#ccaa00'
   },
   {
-    color: 'DF9998'
+    color: '#00aadd'
   },
   {
-    color: '7C6862'
-  },
-  {
-    color: 'A3AB84'
-  },
-  {
-    color: 'D6CCB1'
-  },
-  {
-    color: 'F8D5C4'
-  },
-  {
-    color: 'A3AE99'
-  },
-  {
-    color: 'EFF2F2'
-  },
-  {
-    color: 'B0C5C1'
-  },
-  {
-    color: '8B8C8C'
-  },
-  {
-    color: '565F59'
-  },
-  {
-    color: 'CB304A'
-  },
-  {
-    color: 'FED7C8'
-  },
-  {
-    color: 'C7BDBD'
-  },
-  {
-    color: '3DCBBE'
-  },
-  {
-    color: '264B4F'
-  },
-  {
-    color: '389389'
-  },
-  {
-    color: '85BEAE'
-  },
-  {
-    color: 'F2DABA'
-  },
-  {
-    color: 'F2A97F'
-  },
-  {
-    color: 'D85F52'
-  },
-  {
-    color: 'D92E37'
-  },
-  {
-    color: 'FC9736'
-  },
-  {
-    color: 'F7BD69'
-  },
-  {
-    color: 'A4D09C'
-  },
-  {
-    color: '4C8A67'
-  },
-  {
-    color: '25608A'
-  },
-  {
-    color: '75C8C6'
-  },
-  {
-    color: 'F5E4B7'
-  },
-  {
-    color: 'E69041'
-  },
-  {
-    color: 'E56013'
-  },
-  {
-    color: '11101D'
-  },
-  {
-    color: '630609'
-  },
-  {
-    color: 'C9240E'
-  },
-  {
-    color: 'EC4B17'
-  },
-  {
-    color: '281A1C'
-  },
-  {
-    color: '4F556F'
-  },
-  {
-    color: '64739B'
-  },
-  {
-    color: 'CDBAC7'
-  },
-  {
-    color: '946F43'
-  },
-  {
-    color: '66533C'
-  },
-  {
-    color: '173A2F'
-  },
-  {
-    color: '153944'
-  },
-  {
-    color: '27548D'
-  },
-  {
-    color: '438AAC'
+    color: '#aaaccc'
   }
 ];
 
@@ -299,7 +189,7 @@ const resizeScene = () => {
 
 const initScene = () => {
   scene = new Scene();
-  scene.background = new Color(0x141414);
+  scene.background = new Color('#141414');
   scene.fog = new Fog(BACKGROUND_COLOR, 20, 100);
 
   camera = new PerspectiveCamera(50, 1, 0.1, 1000);
@@ -400,7 +290,7 @@ const selectColor = (color: any) => {
     });
   } else {
     new_mtl = new MeshPhongMaterial({
-      color: parseInt('0x' + color.color),
+      color: color.color,
       shininess: color.shininess ? color.shininess : 10
     });
   }
@@ -410,6 +300,11 @@ const selectColor = (color: any) => {
   setTimeout(() => {
     render();
   }, 100);
+};
+
+const updateColor = () => {
+  console.log('state.dynamicColor: ', state.dynamicColor);
+  selectColor({ color: state.dynamicColor });
 };
 
 onMounted(() => {

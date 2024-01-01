@@ -43,6 +43,11 @@ const router = createRouter({
       path: '/chair-v2',
       name: 'chair-v2',
       component: () => import('../views/ChairV2View.vue')
+    },
+    {
+      path: '/cube-model',
+      name: 'cube-model',
+      component: () => import('../views/CubeModelView.vue')
     }
   ]
 });
