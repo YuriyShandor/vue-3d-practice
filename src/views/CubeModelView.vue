@@ -10,16 +10,16 @@
         </div>
         <div class="w-full flex flex-col gap-3 absolute top-[50px] left-0 z-20">
           <div class="flex gap-2">
-            <div class="text-[18px] font-bold">Radius:</div>
+            <div class="text-[18px] font-bold">First Cube X:</div>
             <label for="input_radius">
               <input
                 type="number"
                 id="input_radius"
                 class="text-black"
                 min="0.5"
-                max="7"
+                max="10"
                 step="0.1"
-                v-model="state.tubeRadius"
+                v-model="state.firstCubeX"
               />
             </label>
           </div>
@@ -42,15 +42,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive } from 'vue';
+import { onMounted, onUnmounted, reactive, watch } from 'vue';
 import { Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight } from 'three';
-import WebGL from 'three/addons/capabilities/WebGL.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const state = reactive({
   tubeRadius: 1,
-  tubeColor: 'black'
+  tubeColor: 'black',
+  firstCubeX: 1,
+  firstCubeY: 1,
+  firstCubeZ: 1
 });
 
 let camera: any, scene: any, renderer: any;
@@ -113,9 +115,14 @@ const loadModel = () => {
     controls.target.copy(gltf.scene.position);
 
     mesh = gltf.scene;
-
-    console.log(mesh);
+    mesh.scale.x = state.firstCubeX;
+    mesh.scale.y = state.firstCubeY;
+    mesh.scale.z = state.firstCubeZ;
   });
+};
+
+const updateColor = () => {
+  console.log(mesh);
 };
 
 onMounted(() => {
@@ -131,4 +138,13 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', resizeScene);
 });
+
+watch(
+  () => state.tubeRadius,
+  () => {
+    mesh.scale.x = state.tubeRadius;
+    render();
+    console.log(mesh);
+  }
+);
 </script>
