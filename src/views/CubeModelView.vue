@@ -19,7 +19,35 @@
                 min="0.5"
                 max="10"
                 step="0.1"
-                v-model="state.firstCubeX"
+                v-model="state.cubeX"
+              />
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <div class="text-[18px] font-bold">First Cube Y:</div>
+            <label for="input_radius">
+              <input
+                type="number"
+                id="input_radius"
+                class="text-black"
+                min="0.5"
+                max="10"
+                step="0.1"
+                v-model="state.cubeY"
+              />
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <div class="text-[18px] font-bold">First Cube Z:</div>
+            <label for="input_radius">
+              <input
+                type="number"
+                id="input_radius"
+                class="text-black"
+                min="0.5"
+                max="10"
+                step="0.1"
+                v-model="state.cubeZ"
               />
             </label>
           </div>
@@ -30,8 +58,8 @@
                 type="text"
                 id="input_radius"
                 class="text-black"
-                v-model="state.tubeColor"
-                @change="updateColor()"
+                v-model="state.cubeColor"
+                @change="updateFirstCubeColor()"
               />
             </label>
           </div>
@@ -43,20 +71,21 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, watch } from 'vue';
-import { Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight } from 'three';
+import { Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, MeshPhongMaterial } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const state = reactive({
-  tubeRadius: 1,
-  tubeColor: 'black',
-  firstCubeX: 1,
-  firstCubeY: 1,
-  firstCubeZ: 1
+  cubeX: 1,
+  cubeY: 1,
+  cubeZ: 1,
+  cubeColor: ''
 });
 
 let camera: any, scene: any, renderer: any;
-let mesh: any, controls: any;
+let controls: any;
+
+let cube: any;
 
 let sceneContainer: HTMLElement | null = null;
 
@@ -114,15 +143,23 @@ const loadModel = () => {
 
     controls.target.copy(gltf.scene.position);
 
-    mesh = gltf.scene;
-    mesh.scale.x = state.firstCubeX;
-    mesh.scale.y = state.firstCubeY;
-    mesh.scale.z = state.firstCubeZ;
+    cube = gltf.scene.children[0];
+    console.log(cube);
+    cube.scale.x = state.cubeX;
+    cube.scale.y = state.cubeY;
+    cube.scale.z = state.cubeZ;
   });
 };
 
-const updateColor = () => {
-  console.log(mesh);
+const updateFirstCubeColor = () => {
+  cube.material = new MeshPhongMaterial({
+    color: state.cubeColor,
+    shininess: 10
+  });
+  render();
+
+  console.log(state.cubeColor);
+  console.log(cube.material);
 };
 
 onMounted(() => {
@@ -140,11 +177,26 @@ onUnmounted(() => {
 });
 
 watch(
-  () => state.tubeRadius,
+  () => state.cubeX,
   () => {
-    mesh.scale.x = state.tubeRadius;
+    cube.scale.x = state.cubeX;
     render();
-    console.log(mesh);
+  }
+);
+
+watch(
+  () => state.cubeY,
+  () => {
+    cube.scale.y = state.cubeY;
+    render();
+  }
+);
+
+watch(
+  () => state.cubeZ,
+  () => {
+    cube.scale.z = state.cubeZ;
+    render();
   }
 );
 </script>
