@@ -313,6 +313,8 @@ onMounted(() => {
   initScene();
   resizeScene();
   renderScene();
+
+  window.addEventListener('resize', resizeScene);
 });
 
 onUnmounted(() => {
